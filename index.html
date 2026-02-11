@@ -19,7 +19,7 @@
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#020617;
-    --card:#020617;
+    --card:#0f172a;
     --text:#e5e7eb;
   }
 }
@@ -88,7 +88,6 @@ th,td{text-align:center;padding:.45rem;border-bottom:1px solid #ccc}
 <body>
 <div class="panel">
 
-<!-- LOGIN -->
 <div id="auth">
   <div class="logo"><span>🌲 B</span></div>
   <h1>Portal Bosque</h1>
@@ -98,7 +97,6 @@ th,td{text-align:center;padding:.45rem;border-bottom:1px solid #ccc}
   <button onclick="register()">Crear usuario</button>
 </div>
 
-<!-- APP -->
 <div id="app" class="hidden">
   <h3 id="welcome"></h3>
 
@@ -140,13 +138,11 @@ th,td{text-align:center;padding:.45rem;border-bottom:1px solid #ccc}
 <script>
 let currentUser=null;
 
-// defaults
 const hoy=new Date();
 fecha.value=hoy.toISOString().slice(0,10);
 entrada.value="07:00";
 salida.value="14:00";
 
-// auth
 function register(){
   if(localStorage.getItem(user.value)) return alert('Usuario ya existe');
   localStorage.setItem(user.value,JSON.stringify({pin:pin.value,logs:[]}));
@@ -163,7 +159,6 @@ function login(){
 }
 function logout(){location.reload()}
 
-// guardar
 function guardar(){
   const d=JSON.parse(localStorage.getItem(currentUser));
   const min=calc(entrada.value,salida.value);
@@ -173,12 +168,12 @@ function guardar(){
   cargarMeses(); animate(render);
 }
 
-// render
 function render(){
   const d=JSON.parse(localStorage.getItem(currentUser));
   const m=mesFiltro.value;
   tabla.innerHTML='';
   let total=0,dias=0;
+
   d.logs.forEach((l,i)=>{
     if(m && !l.f.startsWith(m)) return;
     const min=calc(l.i,l.o);
@@ -192,20 +187,46 @@ function render(){
       <td><button onclick="del(${i})">✕</button></td>
     </tr>`;
   });
-  resumen.innerHTML=`📊 Días: ${dias} · ⏱ Total: ${fmt(total)}`;
+
+  resumen.innerHTML=`📊 Días trabajados: ${dias} · ⏱ Total: ${fmt(total)} hs`;
 }
 
-// compartir
 function compartir(){
   const d=JSON.parse(localStorage.getItem(currentUser));
-  let txt=`🌲 Portal Bosque\nEmpleado: ${currentUser}\n\n`;
+  const m=mesFiltro.value || hoy.toISOString().slice(0,7);
+
+  let total=0,dias=0;
+
+  let mensaje=`🌲 *PORTAL BOSQUE – REGISTRO DE HORARIOS*
+
+Empleado: ${currentUser}
+Mes: ${formatearMes(m)}
+
+📅 *Detalle diario:*`;
+
   d.logs.forEach(l=>{
-    txt+=`${l.f} ${l.i}-${l.o}\n`;
+    if(m && !l.f.startsWith(m)) return;
+    const min=calc(l.i,l.o);
+    total+=min; dias++;
+    mensaje+=`
+${l.f.split('-').reverse().join('/')} · ${l.i} – ${l.o} · ⏱ ${fmt(min)} hs`;
   });
-  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+
+  mensaje+=`
+────────────────
+📊 *Resumen mensual*
+Días trabajados: ${dias}
+Total de horas: ${fmt(total)} hs`;
+
+  window.open("https://wa.me/?text="+encodeURIComponent(mensaje),"_blank");
 }
 
-// helpers
+function formatearMes(m){
+  const [y,mo]=m.split("-");
+  const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return meses[Number(mo)-1]+" "+y;
+}
+
 function del(i){
   const d=JSON.parse(localStorage.getItem(currentUser));
   d.logs.splice(i,1);
@@ -224,14 +245,13 @@ function cargarMeses(){
   const d=JSON.parse(localStorage.getItem(currentUser));
   const ms=[...new Set(d.logs.map(l=>l.f.slice(0,7)))];
   mesFiltro.innerHTML='<option value="">Mes actual</option>';
-  ms.forEach(m=>mesFiltro.innerHTML+=`<option>${m}</option>`);
+  ms.forEach(m=>mesFiltro.innerHTML+=`<option value="${m}">${formatearMes(m)}</option>`);
 }
 function animate(fn){
   app.style.opacity=.4;
   setTimeout(()=>{fn();app.style.opacity=1},120);
 }
 
-// service worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('service-worker.js');
 }
